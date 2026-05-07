@@ -1280,14 +1280,6 @@ export const createRuntimeExecutors = (
       }
 
       const latestAssistantMessage = dbMessages.findLast((message) => message.role === 'assistant');
-      const messageService = new MessageService(ctx.serverDB, ctx.userId);
-      const compressionResult = await messageService.createCompressionGroup(topicId, messageIds, {
-        agentId: state.metadata?.agentId,
-        groupId: state.metadata?.groupId,
-        threadId: state.metadata?.threadId,
-        topicId,
-      });
-
       const compressionModel =
         newState.modelRuntimeConfig?.compressionModel || newState.modelRuntimeConfig;
 
@@ -1312,6 +1304,14 @@ export const createRuntimeExecutors = (
           },
         };
       }
+
+      const messageService = new MessageService(ctx.serverDB, ctx.userId);
+      const compressionResult = await messageService.createCompressionGroup(topicId, messageIds, {
+        agentId: state.metadata?.agentId,
+        groupId: state.metadata?.groupId,
+        threadId: state.metadata?.threadId,
+        topicId,
+      });
 
       const compressionPayload = chainCompressContext(compressionResult.messagesToSummarize);
       const compressionRuntime = await initModelRuntimeFromDB(

@@ -677,6 +677,7 @@ export class AiAgentService {
       if (existingMessageIds.length > 0) {
         const messages = await this.messageModel.query(
           {
+            groupId: appContext?.groupId,
             sessionId: appContext?.sessionId,
             threadId: appContext?.threadId,
             topicId: appContext?.topicId ?? undefined,
@@ -689,6 +690,7 @@ export class AiAgentService {
         // Follow-up message in existing topic: load all history for context.
         historyMessagesCache = await this.messageModel.query(
           {
+            groupId: appContext?.groupId,
             sessionId: appContext?.sessionId,
             threadId: appContext?.threadId,
             topicId: appContext?.topicId,

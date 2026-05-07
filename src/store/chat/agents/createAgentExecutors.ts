@@ -2685,6 +2685,35 @@ export const createAgentExecutors = (context: {
         };
       }
 
+      const compressionModel =
+        state.modelRuntimeConfig?.compressionModel || state.modelRuntimeConfig;
+      const { model, provider } = compressionModel || {};
+
+      if (!model || !provider) {
+        log(`${stagePrefix} Skipping compression: missing compression model config`);
+
+        return {
+          events: [],
+          newState: state,
+          nextContext: {
+            payload: {
+              compressedMessages: compressedMessagesFallback,
+              compressedTokenCount: currentTokenCount,
+              groupId: '',
+              originalTokenCount: currentTokenCount,
+              skipped: true,
+            } as GeneralAgentCompressionResultPayload,
+            phase: 'compression_result',
+            session: {
+              messageCount: state.messages.length,
+              sessionId: state.operationId,
+              status: 'running',
+              stepCount: state.stepCount + 1,
+            },
+          } as AgentRuntimeContext,
+        };
+      }
+
       // Find the latest assistant message to attach the compression operation
       const latestAssistantMessage = dbMessages.findLast((m) => m.role === 'assistant');
       const assistantMessageId = latestAssistantMessage?.id;
@@ -2724,9 +2753,6 @@ export const createAgentExecutors = (context: {
 
         // 2. Update UI with compressed messages immediately
         context.get().replaceMessages(initialCompressedMessages, { context: opContext });
-
-        // 3. Get model/provider from compressionModel config
-        const { model, provider } = state.modelRuntimeConfig?.compressionModel || {};
 
         log(
           `${stagePrefix} Created group=%s, generating summary for %d messages by %s`,

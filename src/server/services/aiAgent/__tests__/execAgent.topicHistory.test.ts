@@ -197,6 +197,26 @@ describe('AiAgentService.execAgent - topic history loading', () => {
         role: 'user',
       });
     });
+
+    it('should load group history with groupId when continuing an existing group topic', async () => {
+      mockMessageQuery.mockResolvedValue([
+        { content: 'group history', groupId: 'group-existing', id: 'msg-prev-1', role: 'user' },
+      ]);
+
+      await service.execAgent({
+        agentId: 'agent-1',
+        appContext: { groupId: 'group-existing', topicId: 'topic-existing' },
+        prompt: 'continue group topic',
+      });
+
+      expect(mockMessageQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          groupId: 'group-existing',
+          topicId: 'topic-existing',
+        }),
+        expect.objectContaining({ postProcessUrl: expect.any(Function) }),
+      );
+    });
   });
 
   describe('when no topicId is provided (first message, new conversation)', () => {

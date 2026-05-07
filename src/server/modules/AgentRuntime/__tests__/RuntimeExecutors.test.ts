@@ -586,6 +586,29 @@ describe('RuntimeExecutors', () => {
       ]);
     });
 
+    it('should skip compress_context without creating a compression group when model config is missing', async () => {
+      mockMessageModel.query.mockResolvedValue([
+        { content: 'history', id: 'msg-history', role: 'user' },
+        { content: 'loading', id: 'assistant-existing', role: 'assistant' },
+      ]);
+
+      const executors = createRuntimeExecutors(ctx);
+      const state = createMockState({
+        messages: [{ content: 'history', id: 'msg-history', role: 'user' }],
+        modelRuntimeConfig: {} as any,
+      });
+
+      const result = await executors.compress_context!(
+        createCompressContextInstruction(state.messages),
+        state,
+      );
+
+      expect(mockCreateCompressionGroup).not.toHaveBeenCalled();
+      expect(mockFinalizeCompression).not.toHaveBeenCalled();
+      expect(initModelRuntimeFromDB).not.toHaveBeenCalled();
+      expect((result.nextContext?.payload as any).skipped).toBe(true);
+    });
+
     it('should skip compress_context when topic metadata is missing', async () => {
       const executors = createRuntimeExecutors({
         ...ctx,
@@ -659,7 +682,7 @@ describe('RuntimeExecutors', () => {
 
       const result = await executors.compress_context!(instruction, state);
 
-      expect(mockCreateCompressionGroup).toHaveBeenCalledTimes(1);
+      expect(mockCreateCompressionGroup).not.toHaveBeenCalled();
       expect(mockFinalizeCompression).not.toHaveBeenCalled();
       expect(result.nextContext?.payload as any).toMatchObject({
         compressedMessages: [{ content: 'history', role: 'user' }],

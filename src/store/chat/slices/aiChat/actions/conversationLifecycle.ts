@@ -1224,6 +1224,9 @@ export class ConversationLifecycleActionImpl {
 
     if (messageIds.length === 0) return;
 
+    const { model, provider } = agentSelectors.getAgentConfigById(agentId)(getAgentStoreState());
+    if (!model || !provider) return;
+
     const tempId = 'tmp_compress_' + nanoid();
     const { abortController, operationId } = this.#get().startOperation({
       context: { ...context, messageId: tempId },
@@ -1263,7 +1266,6 @@ export class ConversationLifecycleActionImpl {
       this.#get().associateMessageWithOperation(messageGroupId, operationId);
 
       // 2. Generate summary via LLM
-      const { model, provider } = agentSelectors.getAgentConfigById(agentId)(getAgentStoreState());
       const compressionPayload = chainCompressContext(messagesToSummarize);
       let summaryContent = '';
 
