@@ -1,0 +1,29 @@
+diff --git a/es/Tooltip/TooltipStandalone.mjs b/es/Tooltip/TooltipStandalone.mjs
+--- a/es/Tooltip/TooltipStandalone.mjs
++++ b/es/Tooltip/TooltipStandalone.mjs
+@@ -7,7 +7,7 @@ import { placementMap } from "../utils/placement.mjs";
+ import { TooltipArrowIcon } from "./ArrowIcon.mjs";
+ import { styles } from "./style.mjs";
+ import TooltipContent from "./TooltipContent.mjs";
+-import { cloneElement, isValidElement, memo, useCallback, useMemo, useState } from "react";
++import { cloneElement, isValidElement, memo, useCallback, useMemo, useRef, useState } from "react";
+ import { jsx, jsxs } from "react/jsx-runtime";
+ import { cx } from "antd-style";
+ import { mergeProps } from "@base-ui/react/merge-props";
+@@ -24,9 +24,14 @@ const DEFAULT_CLOSE_DELAY = 100;
+ const TooltipStandalone = memo(({ children, title, arrow = false, className, classNames, closeDelay, defaultOpen = false, disabled = false, getPopupContainer, hotkey, hotkeyProps, mouseEnterDelay, mouseLeaveDelay, onOpenChange, open, openDelay, placement = "top", popupContainer, styles: styleProps, zIndex, ref: refProp, positionerProps, triggerProps, popupProps, portalProps, standalone: _standalone, ...restProps }) => {
+ 	const isClient = useIsClient();
+ 	const [uncontrolledOpen, setUncontrolledOpen] = useState(Boolean(defaultOpen));
+ 	const [triggerNode, setTriggerNode] = useState(null);
++	const triggerNodeRef = useRef(null);
+ 	const triggerCallbackRef = useCallback((node) => {
+-		if (node) setTriggerNode(node);
++		if (!getPopupContainer) return;
++		if (node && triggerNodeRef.current !== node) {
++			triggerNodeRef.current = node;
++			setTriggerNode(node);
++		}
+-	}, []);
++	}, [getPopupContainer]);
+ 	const resolvedOpen = disabled ? false : open ?? uncontrolledOpen;
+ 	const handleOpenChange = useCallback((nextOpen) => {

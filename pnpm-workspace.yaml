@@ -18,4 +18,6 @@ overrides:
   '@react-pdf/image': 3.0.4
 
 patchedDependencies:
+  '@lobehub/ui@5.10.0': patches/@lobehub__ui@5.10.0.patch
+  '@lobehub/ui@5.10.2': patches/@lobehub__ui@5.10.2.patch
   '@upstash/qstash': patches/@upstash__qstash.patch
