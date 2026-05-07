@@ -333,6 +333,7 @@ export const createRuntimeExecutors = (
       assistantMessageItem = await ctx.messageModel.create({
         agentId: state.metadata!.agentId!,
         content: '',
+        groupId: state.metadata?.groupId,
         model,
         parentId,
         provider,
@@ -1240,6 +1241,7 @@ export const createRuntimeExecutors = (
       const dbMessages = await ctx.messageModel.query(
         {
           agentId: state.metadata?.agentId,
+          groupId: state.metadata?.groupId,
           threadId: state.metadata?.threadId,
           topicId,
         },
@@ -1281,6 +1283,7 @@ export const createRuntimeExecutors = (
       const messageService = new MessageService(ctx.serverDB, ctx.userId);
       const compressionResult = await messageService.createCompressionGroup(topicId, messageIds, {
         agentId: state.metadata?.agentId,
+        groupId: state.metadata?.groupId,
         threadId: state.metadata?.threadId,
         topicId,
       });
@@ -1358,6 +1361,7 @@ export const createRuntimeExecutors = (
         summaryContent,
         {
           agentId: state.metadata?.agentId,
+          groupId: state.metadata?.groupId,
           threadId: state.metadata?.threadId,
           topicId,
         },
@@ -1733,6 +1737,7 @@ export const createRuntimeExecutors = (
           const toolMessage = await ctx.messageModel.create({
             agentId: state.metadata!.agentId!,
             content: executionResult.content,
+            groupId: state.metadata?.groupId,
             metadata: { toolExecutionTimeMs: executionTime },
             parentId: payload.parentMessageId,
             plugin: chatToolPayload as any,
@@ -2152,6 +2157,7 @@ export const createRuntimeExecutors = (
             const toolMessage = await ctx.messageModel.create({
               agentId: state.metadata!.agentId!,
               content: executionResult.content,
+              groupId: state.metadata?.groupId,
               metadata: { toolExecutionTimeMs: executionTime },
               parentId: parentMessageId,
               plugin: chatToolPayload as any,
@@ -2312,6 +2318,7 @@ export const createRuntimeExecutors = (
     const latestMessages = await ctx.messageModel.query(
       {
         agentId: state.metadata?.agentId,
+        groupId: state.metadata?.groupId,
         threadId: state.metadata?.threadId,
         topicId: state.metadata?.topicId,
       },
@@ -2498,6 +2505,7 @@ export const createRuntimeExecutors = (
       try {
         const dbMessages = await ctx.messageModel.query({
           agentId: state.metadata?.agentId,
+          groupId: state.metadata?.groupId,
           threadId: state.metadata?.threadId,
           topicId: state.metadata?.topicId,
         });
@@ -2530,6 +2538,7 @@ export const createRuntimeExecutors = (
         try {
           const dbMessages = await ctx.messageModel.query({
             agentId: state.metadata?.agentId,
+            groupId: state.metadata?.groupId,
             threadId: state.metadata?.threadId,
             topicId: state.metadata?.topicId,
           });
@@ -2559,6 +2568,7 @@ export const createRuntimeExecutors = (
           const toolMessage = await ctx.messageModel.create({
             agentId: state.metadata!.agentId!,
             content: '',
+            groupId: state.metadata?.groupId,
             parentId: parentAssistantId,
             plugin: toolPayload as any,
             pluginIntervention: { status: 'pending' },
@@ -2661,6 +2671,7 @@ export const createRuntimeExecutors = (
         const toolMessage = await ctx.messageModel.create({
           agentId: state.metadata!.agentId!,
           content: 'Tool execution was aborted by user.',
+          groupId: state.metadata?.groupId,
           parentId: parentMessageId,
           plugin: toolPayload as any,
           pluginIntervention: { status: 'aborted' },

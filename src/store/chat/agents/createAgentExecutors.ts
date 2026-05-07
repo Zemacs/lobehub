@@ -2644,9 +2644,19 @@ export const createAgentExecutors = (context: {
 
       // Get message IDs from dbMessagesMap (raw db messages)
       const dbMessages = context.get().dbMessagesMap[context.messageKey] || [];
-      const messageIds = getCompressionCandidateMessageIds(dbMessages);
+      const lastMessage = messages.at(-1);
+      const preservedMessages =
+        messages.length > 1 && lastMessage?.role === 'user' ? [lastMessage] : [];
+      const preservedMessageIds = new Set(
+        preservedMessages.map((message) => message.id).filter((id): id is string => Boolean(id)),
+      );
+      const messagesToCompress = preservedMessages.length > 0 ? messages.slice(0, -1) : messages;
+      const compressedMessagesFallback = [...messagesToCompress, ...preservedMessages];
+      const messageIds = getCompressionCandidateMessageIds(dbMessages).filter(
+        (id) => !preservedMessageIds.has(id),
+      );
 
-      if (!topicId || messageIds.length === 0) {
+      if (!topicId || messageIds.length === 0 || messagesToCompress.length === 0) {
         // No topicId or no messages, skip compression
         log(
           `${stagePrefix} Skipping compression: topicId=%s, messageIds=%d`,
@@ -2658,7 +2668,7 @@ export const createAgentExecutors = (context: {
           newState: state,
           nextContext: {
             payload: {
-              compressedMessages: messages,
+              compressedMessages: compressedMessagesFallback,
               compressedTokenCount: currentTokenCount,
               groupId: '',
               originalTokenCount: currentTokenCount,
@@ -2705,7 +2715,9 @@ export const createAgentExecutors = (context: {
         // 1. Create compression group with placeholder content
         const result = await messageService.createCompressionGroup({
           agentId,
+          groupId: opContext.groupId,
           messageIds,
+          threadId: opContext.threadId,
           topicId,
         });
         const { messageGroupId, messages: initialCompressedMessages, messagesToSummarize } = result;
@@ -2767,13 +2779,28 @@ export const createAgentExecutors = (context: {
         const finalResult = await messageService.finalizeCompression({
           agentId,
           content: summaryContent,
+          groupId: opContext.groupId,
           messageGroupId,
+          threadId: opContext.threadId,
           topicId,
         });
         // Complete the generateSummary operation
         context.get().completeOperation(summaryOperationId);
 
-        const compressedMessages = finalResult.messages || initialCompressedMessages;
+        const compressedMessages = [...(finalResult.messages || initialCompressedMessages)];
+        for (const preservedMessage of preservedMessages) {
+          if (
+            !compressedMessages.some(
+              (message) =>
+                message === preservedMessage ||
+                (Boolean(message.id) &&
+                  Boolean(preservedMessage.id) &&
+                  message.id === preservedMessage.id),
+            )
+          ) {
+            compressedMessages.push(preservedMessage);
+          }
+        }
         const groupId = messageGroupId;
         // Use the latest assistant message ID (before compression) as parentMessageId for next call_llm
         const parentMessageId = assistantMessageId;
@@ -2830,7 +2857,7 @@ export const createAgentExecutors = (context: {
             newState: state,
             nextContext: {
               payload: {
-                compressedMessages: messages,
+                compressedMessages: compressedMessagesFallback,
                 skipped: true,
               } as GeneralAgentCompressionResultPayload,
               phase: 'compression_result',
@@ -2862,7 +2889,7 @@ export const createAgentExecutors = (context: {
           newState: state,
           nextContext: {
             payload: {
-              compressedMessages: messages,
+              compressedMessages: compressedMessagesFallback,
               skipped: true,
             } as GeneralAgentCompressionResultPayload,
             phase: 'compression_result',

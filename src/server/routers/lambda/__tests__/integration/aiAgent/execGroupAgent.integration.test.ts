@@ -239,6 +239,7 @@ describe('execGroupAgent', () => {
       expect(createdMessages).toHaveLength(1);
       expect(createdMessages[0].content).toBe('User message in group');
       expect(createdMessages[0].agentId).toBe(testAgentId);
+      expect(createdMessages[0].groupId).toBe(testGroupId);
     });
   });
 
@@ -259,6 +260,19 @@ describe('execGroupAgent', () => {
       // Verify response contains messages
       expect(result.messages).toBeDefined();
       expect(Array.isArray(result.messages)).toBe(true);
+      expect(result.messages).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            content: 'Test message',
+            groupId: testGroupId,
+            role: 'user',
+          }),
+          expect.objectContaining({
+            groupId: testGroupId,
+            role: 'assistant',
+          }),
+        ]),
+      );
 
       // Verify isCreateNewTopic flag
       expect(result.isCreateNewTopic).toBe(true);

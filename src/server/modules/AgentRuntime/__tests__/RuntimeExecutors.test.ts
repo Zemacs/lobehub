@@ -298,6 +298,37 @@ describe('RuntimeExecutors', () => {
       );
     });
 
+    it('should preserve groupId when creating assistant messages for group runs', async () => {
+      const executors = createRuntimeExecutors(ctx);
+      const state = createMockState({
+        metadata: {
+          agentId: 'agent-123',
+          groupId: 'group-123',
+          topicId: 'topic-123',
+        },
+      });
+
+      const instruction = {
+        payload: {
+          messages: [{ content: 'Hello', role: 'user' }],
+          model: 'gpt-4',
+          parentMessageId: 'parent-msg-456',
+          provider: 'openai',
+          tools: [],
+        },
+        type: 'call_llm' as const,
+      };
+
+      await executors.call_llm!(instruction, state);
+
+      expect(mockMessageModel.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          groupId: 'group-123',
+          parentId: 'parent-msg-456',
+        }),
+      );
+    });
+
     it('should use model and provider from state.modelRuntimeConfig as fallback', async () => {
       const executors = createRuntimeExecutors(ctx);
       const state = createMockState({
@@ -478,6 +509,81 @@ describe('RuntimeExecutors', () => {
         type: 'compression_complete',
       });
       expect(result.newState.usage.llm.tokens.total).toBe(15);
+    });
+
+    it('should preserve groupId through group compression and continuation', async () => {
+      const mockChat = vi.fn().mockImplementation(async (_payload, options) => {
+        await options?.callback?.onText?.('summary');
+        return new Response('done');
+      });
+      vi.mocked(initModelRuntimeFromDB).mockResolvedValueOnce({ chat: mockChat } as any);
+
+      mockMessageModel.query.mockResolvedValue([
+        { content: 'history', id: 'msg-history', role: 'user' },
+        { content: 'loading', id: 'assistant-existing', role: 'assistant' },
+      ]);
+      mockCreateCompressionGroup.mockResolvedValue({
+        messageGroupId: 'compression-group-123',
+        messagesToSummarize: [{ content: 'history', id: 'msg-history', role: 'user' }],
+        success: true,
+      });
+      mockFinalizeCompression.mockResolvedValue({
+        messages: [
+          { content: 'summary', id: 'compression-group-123', role: 'compressedGroup' },
+          { content: 'continue', id: 'msg-follow-up', role: 'user' },
+        ],
+        success: true,
+      });
+
+      const executors = createRuntimeExecutors(ctx);
+      const state = createMockState({
+        messages: [
+          { content: 'history', id: 'msg-history', role: 'user' },
+          { content: 'continue', id: 'msg-follow-up', role: 'user' },
+        ],
+        metadata: {
+          agentId: 'agent-123',
+          groupId: 'chat-group-123',
+          topicId: 'topic-123',
+        },
+      });
+
+      const result = await executors.compress_context!(
+        createCompressContextInstruction(state.messages),
+        state,
+      );
+
+      expect(mockMessageModel.query).toHaveBeenCalledWith(
+        expect.objectContaining({
+          agentId: 'agent-123',
+          groupId: 'chat-group-123',
+          topicId: 'topic-123',
+        }),
+        expect.any(Object),
+      );
+      expect(mockCreateCompressionGroup).toHaveBeenCalledWith(
+        'topic-123',
+        ['msg-history', 'assistant-existing'],
+        expect.objectContaining({
+          agentId: 'agent-123',
+          groupId: 'chat-group-123',
+          topicId: 'topic-123',
+        }),
+      );
+      expect(mockFinalizeCompression).toHaveBeenCalledWith(
+        'compression-group-123',
+        'summary',
+        expect.objectContaining({
+          agentId: 'agent-123',
+          groupId: 'chat-group-123',
+          topicId: 'topic-123',
+        }),
+      );
+      expect(result.nextContext?.phase).toBe('compression_result');
+      expect((result.nextContext?.payload as any).compressedMessages).toEqual([
+        { content: 'summary', id: 'compression-group-123', role: 'compressedGroup' },
+        { content: 'continue', id: 'msg-follow-up', role: 'user' },
+      ]);
     });
 
     it('should skip compress_context when topic metadata is missing', async () => {

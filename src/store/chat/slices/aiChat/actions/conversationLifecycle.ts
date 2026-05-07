@@ -1251,7 +1251,9 @@ export class ConversationLifecycleActionImpl {
       // 1. Create compression group on server
       const result = await messageService.createCompressionGroup({
         agentId,
+        groupId: context.groupId,
         messageIds,
+        threadId: context.threadId,
         topicId,
       });
       const { messageGroupId, messages: serverMessages, messagesToSummarize } = result;
@@ -1285,7 +1287,9 @@ export class ConversationLifecycleActionImpl {
       const finalResult = await messageService.finalizeCompression({
         agentId,
         content: summaryContent,
+        groupId: context.groupId,
         messageGroupId,
+        threadId: context.threadId,
         topicId,
       });
 

@@ -1417,6 +1417,7 @@ export class AiAgentService {
           agentId: resolvedAgentId,
           content: prompt,
           files: fileIds,
+          groupId: appContext?.groupId ?? undefined,
           role: 'user',
           threadId: appContext?.threadId ?? undefined,
           topicId,
@@ -1448,6 +1449,7 @@ export class AiAgentService {
     const assistantMessageRecord = await this.messageModel.create({
       agentId: resolvedAgentId,
       content: LOADING_FLAT,
+      groupId: appContext?.groupId ?? undefined,
       model,
       parentId: parentMessageId ?? userMessageRecord?.id,
       provider,

@@ -19,6 +19,19 @@ import { resetTestEnvironment, setupMockSelectors, spyOnMessageService } from '.
 // Keep zustand mock as it's needed globally
 vi.mock('zustand/traditional');
 
+vi.hoisted(() => {
+  const storage = new Map<string, string>();
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: {
+      clear: () => storage.clear(),
+      getItem: (key: string) => storage.get(key) ?? null,
+      removeItem: (key: string) => storage.delete(key),
+      setItem: (key: string, value: string) => storage.set(key, value),
+    },
+  });
+});
+
 const executeHeterogeneousAgentMock = vi.hoisted(() => vi.fn());
 const mockConstEnv = vi.hoisted(() => ({ isDesktop: false }));
 const mockLocalFileService = vi.hoisted(() => ({
@@ -224,7 +237,9 @@ describe('ConversationLifecycle actions', () => {
         );
         expect(createCompressionGroupSpy).toHaveBeenCalledWith({
           agentId,
+          groupId: undefined,
           messageIds: ['user-1', 'assistant-1'],
+          threadId: null,
           topicId,
         });
       });
